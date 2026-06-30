@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Matrix - Para Francielle</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; overflow: hidden;
+    background: #000; width: 100%; height: 100%;
+    font-family: 'Courier New', monospace;
+    overscroll-behavior: none;
+  }
+  #matrix {
+    position: fixed; top:0; left:0; z-index: 1;
+  }
+  #overlay {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    z-index: 2; display:flex; align-items:center; justify-content:center;
+    text-align:center; padding: 20px; box-sizing:border-box;
+  }
+  #phraseText {
+    color: #0f0;
+    font-size: clamp(15px, 4.5vw, 38px);
+    font-weight: bold;
+    text-shadow: 0 0 8px #0f0, 0 0 18px #0f0, 0 0 30px #0a0;
+    max-width: min(900px, 92vw);
+    line-height: 1.5;
+    opacity: 0;
+    letter-spacing: 1px;
+    word-wrap: break-word;
+    transition: opacity 0.6s ease;
+  }
+  #phraseText.show { opacity: 1; }
+
+  .heartWrap {
+    position: relative;
+    width: 380px; height: 350px;
+    max-width: 88vw;
+    max-height: 80vh;
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 1.2s ease, transform 1.2s ease;
+  }
+  .heartWrap.show {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .heartShape {
+    position: absolute;
+    width: 250px; height: 250px;
+    top: 30px; left: 65px;
+    background: radial-gradient(circle at 30% 30%, #ff1a1a, #3a0000 70%);
+    transform: rotate(-45deg);
+    box-shadow: 0 0 40px #ff0000, 0 0 80px #b30000 inset;
+    animation: beat 1.4s infinite ease-in-out;
+  }
+  .heartShape::before,
+  .heartShape::after {
+    content: "";
+    position: absolute;
+    width: 250px; height: 250px;
+    background: radial-gradient(circle at 30% 30%, #ff1a1a, #3a0000 70%);
+    border-radius: 50%;
+    box-shadow: 0 0 40px #ff0000;
+  }
+  .heartShape::before { top: -125px; left: 0; }
+  .heartShape::after { top: 0; left: 125px; }
+
+  @keyframes beat {
+    0%, 100% { transform: rotate(-45deg) scale(1); }
+    50% { transform: rotate(-45deg) scale(1.05); }
+  }
+
+  .heartText {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display:flex; align-items:center; justify-content:center;
+    z-index: 3;
+    padding: 50px 35px;
+    box-sizing: border-box;
+  }
+  .heartText span {
+    color: #fff5f5;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    text-shadow: 0 0 6px #000, 0 0 5px #ff0000;
+    line-height: 1.4;
+  }
+
+  @media (max-width: 480px) {
+    .heartWrap {
+      width: 280px; height: 260px;
+    }
+    .heartShape {
+      width: 180px; height: 180px;
+      top: 22px; left: 48px;
+    }
+    .heartShape::before,
+    .heartShape::after {
+      width: 180px; height: 180px;
+    }
+    .heartShape::before { top: -90px; left: 0; }
+    .heartShape::after { top: 0; left: 90px; }
+    .heartText {
+      padding: 35px 22px;
+    }
+    .heartText span {
+      font-size: 11.5px;
+      line-height: 1.35;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .heartWrap {
+      width: 240px; height: 225px;
+    }
+    .heartShape {
+      width: 155px; height: 155px;
+      top: 20px; left: 41px;
+    }
+    .heartShape::before,
+    .heartShape::after {
+      width: 155px; height: 155px;
+    }
+    .heartShape::before { top: -77px; left: 0; }
+    .heartShape::after { top: 0; left: 77px; }
+    .heartText span {
+      font-size: 10px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<div id="overlay">
+  <div id="phraseText"></div>
+  <div class="heartWrap" id="heartWrap">
+    <div class="heartShape"></div>
+    <div class="heartText"><span id="heartTextSpan"></span></div>
+  </div>
+</div>
+
+<script>
+/* ===== EFEITO MATRIX DE FUNDO ===== */
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const chars = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789";
+const fontSize = 16;
+let columns = Math.floor(canvas.width / fontSize);
+let drops = Array(columns).fill(1);
+
+function resetDrops() {
+  columns = Math.floor(canvas.width / fontSize);
+  drops = Array(columns).fill(1);
+}
+window.addEventListener('resize', resetDrops);
+
+function drawMatrix() {
+  ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#0f0";
+  ctx.font = fontSize + "px monospace";
+
+  for (let i = 0; i < drops.length; i++) {
+    const text = chars[Math.floor(Math.random() * chars.length)];
+    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+      drops[i] = 0;
+    }
+    drops[i]++;
+  }
+}
+setInterval(drawMatrix, 35);
+
+/* ===== EFEITO DE DECODIFICAÇÃO TIPO MATRIX NO TEXTO ===== */
+const scrambleChars = "アイウエオカキクケコサシスセソタチツテト#$%&*+-/<>0123456789";
+
+function decodeText(el, finalText, duration = 2200, onDone) {
+  el.classList.add('show');
+  const startTime = performance.now();
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    let output = "";
+    for (let i = 0; i < finalText.length; i++) {
+      const ch = finalText[i];
+      if (ch === " " || ch === "\n") {
+        output += ch;
+        continue;
+      }
+      const charThreshold = i / finalText.length;
+      if (progress >= charThreshold) {
+        output += ch;
+      } else {
+        output += scrambleChars[Math.floor(Math.random() * scrambleChars.length)];
+      }
+    }
+    el.innerHTML = output;
+
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      el.innerHTML = finalText;
+      if (onDone) onDone();
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+/* ===== SEQUÊNCIA DE FRASES ===== */
+const phrases = [
+  "Sinto sua falta branquinha mais linda desse mundão.",
+  "Cada segundo longe de você pra mim importa muito.\nEntão, vem logo pros meus braços e assume que eu mexo com você.",
+  "Aceitaria passar uma noite inteira comigo para matarmos a saudade\ne escancarar de vez que você gosta de mim e eu gosto de você?"
+];
+
+const finalHeartText = 'Aceita ser meu par romântico essa semana, Francielle?\nPodemos entender caso a senhorita desejar.';
+
+const phraseEl = document.getElementById('phraseText');
+const heartWrap = document.getElementById('heartWrap');
+const heartTextSpan = document.getElementById('heartTextSpan');
+
+const CYCLE_TIME = 8000; // 8 segundos entre uma mudança e outra
+
+let idx = 0;
+
+function showPhrase(text) {
+  phraseEl.classList.remove('show');
+  phraseEl.innerHTML = "";
+  setTimeout(() => {
+    decodeText(phraseEl, text, 2200);
+  }, 150);
+}
+
+function fadeOutPhrase(callback) {
+  phraseEl.classList.remove('show');
+  setTimeout(callback, 600);
+}
+
+function runSequence() {
+  if (idx < phrases.length) {
+    showPhrase(phrases[idx]);
+    idx++;
+    setTimeout(() => {
+      fadeOutPhrase(runSequence);
+    }, CYCLE_TIME);
+  } else {
+    // Esconde a frase e mostra o coração
+    phraseEl.classList.remove('show');
+    setTimeout(showHeart, 600);
+  }
+}
+
+function showHeart() {
+  heartWrap.classList.add('show');
+  setTimeout(() => {
+    decodeText(heartTextSpan, finalHeartText, 2800);
+  }, 600);
+}
+
+// Inicia tudo
+setTimeout(runSequence, 800);
+</script>
+
+</body>
+</html>
